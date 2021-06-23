@@ -1,0 +1,23 @@
+<html>
+  <body>
+    <div class="content" width="800px">
+      <h1>{{ page.title }}</h1>
+      <div class="main_text" width="495px">
+        {% autoescape off %}
+        {{ page.text }}
+        {% endautoescape %}
+      </div>
+      <div class="images" width="300px">
+        {% if page.popup_image1 %}
+        <img width="300px" src="{{ page.popup_image1.url }}">
+        {% endif %}
+        {% if page.popup_image2 %}
+        <img width="300px" src="{{ page.popup_image2.url }}">
+        {% endif %}
+        {% if page.url %}
+        <img src="https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl={{ page.url }}">
+        <p class="qr-caption">Scan QR code for more information.</p>
+        {% endif %}
+    </div>
+  </body>
+</html>

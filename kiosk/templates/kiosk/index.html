@@ -1,0 +1,355 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="initial-scale = 0.53;" />
+
+    <link href="{{ STATIC_URL }}kiosk/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="{{ STATIC_URL }}kiosk/fancybox/jquery.fancybox.css?v=2.0.6" type="text/css" media="screen" />
+
+
+<style type="text/css" media="screen">
+body{
+	font-family: "Lucida Grande", "Lucida Sans Unicode", Geneva, Arial, Helvetica, sans-serif;
+	font-size: small;
+        line-height: 140%;
+        color: #303030;
+        margin: 0px;
+        overflow: hidden;
+    }
+
+.modal-body { max-height: 1400px; }
+a{ color: #303030; }
+a:hover{ color: black; }
+
+img.image{ display: none; }
+
+h1 { font-size: 25px; line-height: 30px; }
+
+#Page {
+	margin: 0px;
+	padding: 0px;
+  /*background: transparent url({{ page.page_image.url }}) top left no-repeat;*/
+  background-color: #000000;
+	width: 3840px;
+	height: 2160px;
+	position: relative;
+}
+
+.content {
+  background-color: white;
+}
+.fancybox-skin {
+  background-color: white;
+}
+
+.qr-caption {
+  text-align: center;
+}
+
+.main_text {
+  float: left;
+  width: 755px;
+}
+
+.images {
+  margin-left: 850px;
+}
+
+.box-wrapper {
+  background-color: white;
+}
+
+.kiosk-popup {
+  width: 1200px;
+  margin-left: -400px;
+}
+
+.item-popup {
+  width: 900px;
+  margin-left: -450px;
+}
+
+.item-textarea {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.linkItem {
+    position: absolute;
+/*    border: 1px dashed red;*/
+}
+
+.linkItem .linkName {
+  display: none;
+  font-size: 18px;
+  text-align: center;
+  border: 2px solid green;
+  padding: 2px;
+  background: rgba(204, 255, 204, 0.6);
+}
+
+.linkItem .linkDelete {
+  display: none;
+  font-size: 18px;
+  height: 20px;
+  width: 20px;
+  border: 2px solid red;
+  float: right;
+  text-align: center;
+  background: rgba(204, 102, 102, 0.6);
+}
+
+.linkVisible {
+  border: 2px solid white !important;
+  background: rgba( 255, 255, 191, 0.5) !important;
+}
+
+img.floatRight { float: left; margin: 5px; }
+
+
+#EditMenu {
+    top: 0px;
+    left: 0px;
+    position: absolute;
+    display: none;
+}
+.validate_tips { border: 1px solid transparent; padding: 0.3em; }
+#dialog-form { display: none; }
+#reset-message { display: none; }
+.modal-overflow {
+  max-height: 75%;
+  overflow-y: auto;
+}
+</style>
+
+</head>
+<body id="Body">
+  <div id="Page">
+    <div id="LinkCollection">
+    </div>
+    <div id="EditMenu">
+      <div class="btn-group">
+        <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">Edit
+         <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+         <li><a href="#" id="editThisPageButton" role="button">Edit (t)his page</a></li>
+         <li><a href="#" id="newPopupButton" role="button">Add a new (p)opup</a></li>
+         <li><a href="#" id="newLinkButton" role="button">Add a (l)ink</a></li>
+         <li><a href="#" id="newPageButton" role="button">Add a (n)ew page</a></li>
+        </ul>
+      </div>
+      <div id="messages"></div>
+    </div>
+
+    <! -- templates -->
+    <script type="text/template" id="linkTemplate">
+    <div class="linkItem" style="top: <%= top %>px; left: <%= left %>px; width: <%= width %>px; height: <%= height %>px;">
+      <div class="linkName"><%= link %></div>
+      <div class="linkDelete">&times;</div>
+    </div>
+    </script>
+
+    <script type="text/template" id="popupTemplate">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h2><%= popup.get('title') %></h2>
+      </div>
+      <div class="modal-body">
+        <div class="main_text lead" width="595px">
+           <%= popup.get('text') %>
+        </div>
+        <div class="images" width="300px">
+          <% if (popup.get('popup_image1')) { %>
+          <img width="300px" src="<%= popup.get('popup_image1') %>">
+          <% } %>
+          <% if (popup.get('popup_image2')) { %>
+          <img width="300px" src="<%= popup.get('popup_image2') %>">
+          <% } %>
+          <% if (popup.get('url')) { %>
+          <img src="https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=<%= popup.get('url') %>">
+          <p class="qr-caption">Scan QR code for more information.</p>
+          <% } %>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-lg" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </script>
+  <div id="popup" class="modal hide kiosk-popup"></div>
+
+  <div id="updatePageBackground" class="modal hide" tabindex="-1" role="dialog">
+    <div class="modal-header">
+     <button type="button" class="close" data-dismiss="modal">&times;</button>
+     <h3>Update background image</h3>
+   </div>
+   <div class="modal-body">
+    <p>Update background image for this page.</p>
+    <div id="updatePageBackgroundAlerts"></div>
+    <form id="updatePageBackgroundForm">
+      <fieldset>
+        <input id="updatePageBackgroundFile" type="file" class="filestyle">
+        {% csrf_token %}
+      </fieldset>
+    </form>
+  </div>
+   <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Close</button>
+    <button class="btn btn-primary">Update</button>
+   </div>
+  </div>
+
+  <div id="editItemDialog" class="modal modal-overflow hide item-popup" tabindex="-1" role="dialog"></div>
+  
+  <script type="text/template" id="editItemDialogTemplate">
+    <div class="modal-header">
+     <button type="button" class="close" data-dismiss="modal">&times;</button>
+     <h3><%= action %> <%= model.get("type") %></h3>
+   </div>
+   <div class="modal-body">
+    <form>
+      <fieldset>
+        <label>Name</label>
+        <input name="name" class="input-xxlarge" type="text" placeholder="Name of <%= model.get("type") %>" value="<%= model.get("name") %>">
+        <span class="help-block">Name of <%= model.get("type") %>, this will appear in the URL.</span>
+        <label>Title</label>
+        <input name="title" class="input-xxlarge" type="text" placeholder="Title of <%= model.get("type") %>" value="<%= model.get("title") %>">
+        <span class="help-block">Title of <%= model.get("type") %>, this is a descriptive summary of the <%= model.get("type") %>.</span>
+
+        <% if(model.get("type") === "popup") { %>
+        <label>Image 1<span id="popup_image1_error"></span></label>
+        <div class="input-append">
+          <input name="popup_image1" type="file" class="hide image-file">
+          <input class="input-xlarge image-file-chosen" type="text" <%= model.formFilenameValue('popup_image1') %>>
+          <a class="btn image-file-button">Select</a>
+        </div>
+        <span class="help-block">First image file for this popup.</span>
+        <label>Image 2<span id="popup_image2_error"></span></label>
+        <div class="input-append">
+          <input name="popup_image2" type="file" class="hide image-file" onchange="console.log('changeditup!)'">
+          <input class="input-xlarge image-file-chosen" type="text" <%= model.formFilenameValue('popup_image2') %>>
+          <a class="btn image-file-button">Select</a>
+        </div>
+        <span class="help-block">Second image file for this popup.</span>
+        <label>URL</label>
+        <input name="url" class="input-xxlarge" type="text" placeholder="URL" value="<%= model.get("url") %>">
+        <span class="help-block">URL for further information, will be displayed as a QR code.</span>
+        <label>Text</label>
+        <textarea name="text" rows="5" class="item-textarea" placeholder="HTML Here"><%= model.get("text") %></textarea>
+        <span class="help-block">Text content for this popup.
+        <% } else { %>
+        <label>Page Image<span id="page_image_error"></span></label>
+        <div class="input-append">
+          <input name="page_image" type="file" class="image-file hide">
+          <input class="input-xlarge image-file-chosen" type="text" <%= model.formFilenameValue('page_image') %>>
+          <a class="btn image-file-button">Select</a>
+        </div>
+        <span class="help-block">Image file for this page.</span>
+        <% } %>
+        <input type="hidden" name="type" value="<%= model.get("type") %>">
+      </fieldset>
+    </form>
+   </div>
+   <div class="modal-footer">
+    <% if (action === "Update") { %>
+    <button class="btn btn-danger pull-left">Delete</button>
+    <span class="pull-left text-warning">&nbsp;&nbsp;Delete this <%= model.get("type") %> and all references to it</span>
+    <% } %>
+    <button class="btn" data-dismiss="modal">Cancel</button>
+    <button type="submit" class="btn btn-primary <%= action %>-btn"><%= action %></button>
+   </div>
+  </script>
+
+  <script type="text/template" id="LinkDialogTemplate">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h3><%= action %> link</h3>
+      </div>
+    <div class="modal-body">
+      <p>Define a rectangle for a link.</p>
+      <form>
+        <fieldset>
+          <label>Target</label>
+          <select>
+          <% _.each(items, function(item) { %>
+            <% if(link === item.get("id")) { %>
+            <option value="<%= item.get('id') %>" selected><%= item.get('id') %></option>
+            <% } else { %>
+            <option value="<%= item.get('id') %>"><%= item.get('id') %></option>
+            <% } %>
+          <% }); %>
+          </select>
+          <span class="help-block">Target for link</span>
+        </fieldset>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal">Cancel</button>
+      <button class="btn btn-primary"><%= action %></button>
+    </div>
+  </script>
+
+  <div id="LinkDialog" class="modal hide" tabindex="-1" role="dialog"> </div>
+
+<div id="dialog-form" title="Create new link">
+    <p class="validate_tips">All form fields are required.</p>
+    <form>
+    <fieldset>
+        <label for="link">Link</label>
+        <select name="link" id="link">
+        </select>
+    </fieldset>
+    </form>
+</div>
+<div id="resetPopup" class="modal hide" tabindex="-1" role="dialog">
+  <div class="modal-header">
+    <h3>Are you still there?</h3>
+  </div>
+  <div class="modal-body">
+    Tap 'Stay on page' within <span id="countdown">10</span> seconds to prevent the kiosk from resetting.
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" data-dismiss="modal">Stay on page</button>
+  </div>
+</div>
+</div>
+
+<script type="text/javascript"
+    src="https://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+<script type="text/javascript"
+      src="{{ STATIC_URL }}kiosk/js/bootstrap.min.js"></script>
+<script type="text/javascript"
+      src="{{ STATIC_URL }}kiosk/js/bootstrap-filestyle.min.js"></script>
+<script type="text/javascript"
+    src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
+
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/js/underscore-min.js"></script>
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/js/backbone-min.js"></script>
+
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/fancybox/jquery.fancybox.pack.js?v=2.0.6"></script>
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/jquery.jeditable.js?v=1.7.1"></script>
+
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/jquery.idle-timer.js?v=0.9.100511"></script>
+<script type="text/javascript"
+  src="{{ STATIC_URL }}kiosk/jquery.timer.js"></script>
+
+<script type="text/javascript" src="{{ STATIC_URL }}kiosk/kiosk.js"></script>
+
+<script type="text/javascript">
+  $(document).ready(function() {
+    //kiosk.init("{{ page.name }}", "{{ user.is_staff }}" === "True" ? true : false);
+    var app = kiosk.Controller;
+    app.init("{{ user.is_staff }}" === "True" ? true : false);
+  });
+</script>
+</body>
